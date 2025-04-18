@@ -1,67 +1,44 @@
--- CreateTable
+-- Create User table
+CREATE TABLE "User" (
+    "id" SERIAL PRIMARY KEY,
+    "username" TEXT NOT NULL,
+    "password" TEXT NOT NULL
+);
+
+-- Create Profile table
 CREATE TABLE "Profile" (
-    "id" SERIAL NOT NULL,
-    "email" TEXT NOT NULL,
+    "id" SERIAL PRIMARY KEY,
+    "email" TEXT NOT NULL UNIQUE,
     "name" TEXT,
     "address" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
-    "userId" INTEGER NOT NULL,
-
-    CONSTRAINT "Profile_pkey" PRIMARY KEY ("id")
+    "userId" INTEGER NOT NULL UNIQUE,
+    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
--- CreateTable
-CREATE TABLE "User" (
-    "id" SERIAL NOT NULL,
-    "username" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
+-- Create Post table
 CREATE TABLE "Post" (
-    "id" SERIAL NOT NULL,
+    "id" SERIAL PRIMARY KEY,
     "title" TEXT NOT NULL,
     "content" TEXT,
     "published" BOOLEAN NOT NULL DEFAULT false,
     "authorId" INTEGER NOT NULL,
-
-    CONSTRAINT "Post_pkey" PRIMARY KEY ("id")
+    FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
--- CreateTable
+-- Create Category table
 CREATE TABLE "Category" (
-    "id" SERIAL NOT NULL,
-    "name" TEXT NOT NULL,
-
-    CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
+    "id" SERIAL PRIMARY KEY,
+    "name" TEXT NOT NULL
 );
 
--- CreateTable
+-- Create CategoriesOnPosts junction table
 CREATE TABLE "CategoriesOnPosts" (
     "postId" INTEGER NOT NULL,
     "categoryId" INTEGER NOT NULL,
     "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "assignedBy" TEXT NOT NULL,
-
-    CONSTRAINT "CategoriesOnPosts_pkey" PRIMARY KEY ("postId","categoryId")
+    PRIMARY KEY ("postId", "categoryId"),
+    FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
-
--- CreateIndex
-CREATE UNIQUE INDEX "Profile_email_key" ON "Profile"("email");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Profile_userId_key" ON "Profile"("userId");
-
--- AddForeignKey
-ALTER TABLE "Profile" ADD CONSTRAINT "Profile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Post" ADD CONSTRAINT "Post_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CategoriesOnPosts" ADD CONSTRAINT "CategoriesOnPosts_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CategoriesOnPosts" ADD CONSTRAINT "CategoriesOnPosts_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
