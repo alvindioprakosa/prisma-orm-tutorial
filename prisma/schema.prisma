@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,16 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-model Profile {
-  id      Int     @id @default(autoincrement())
-  email   String  @unique
-  name    String?
-  address String
-  phone   String
-  user    User    @relation(fields: [userId], references: [id])
-  userId  Int     @unique
 }
 
 model User {
@@ -28,13 +15,23 @@ model User {
   Post     Post[]
 }
 
+model Profile {
+  id      Int    @id @default(autoincrement())
+  email   String @unique
+  name    String?
+  address String
+  phone   String
+  userId  Int    @unique
+  user    User   @relation(fields: [userId], references: [id])
+}
+
 model Post {
   id                Int                 @id @default(autoincrement())
   title             String
   content           String?
   published         Boolean             @default(false)
-  author            User                @relation(fields: [authorId], references: [id])
   authorId          Int
+  author            User                @relation(fields: [authorId], references: [id])
   CategoriesOnPosts CategoriesOnPosts[]
 }
 
@@ -45,12 +42,13 @@ model Category {
 }
 
 model CategoriesOnPosts {
-  post       Post     @relation(fields: [postId], references: [id])
   postId     Int
-  category   Category @relation(fields: [categoryId], references: [id])
   categoryId Int
   assignedAt DateTime @default(now())
   assignedBy String
+
+  post     Post     @relation(fields: [postId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
 
   @@id([postId, categoryId])
 }
