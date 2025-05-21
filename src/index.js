@@ -9,163 +9,105 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Create User
-app.post("/user", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const data = await prisma.user.create({
-      data: { username, password },
-    });
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to create user" });
-  }
-});
+// Helper untuk async error handler
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch((err) => {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  });
+};
 
-// Create Profile
-app.post("/profile", async (req, res) => {
-  try {
-    const { email, name, address, phone, userId } = req.body;
-    const data = await prisma.profile.create({
-      data: { email, name, address, phone, userId },
-    });
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to create profile" });
-  }
-});
+// ------------------- USER -------------------
+app.post("/user", asyncHandler(async (req, res) => {
+  const { username, password } = req.body;
+  const user = await prisma.user.create({ data: { username, password } });
+  res.status(201).json(user);
+}));
 
-// Update User
-app.put("/user/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { username, password } = req.body;
+app.put("/user/:id", asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { username, password } = req.body;
+  const user = await prisma.user.update({
+    where: { id: Number(id) },
+    data: { username, password },
+  });
+  res.json(user);
+}));
 
-    const data = await prisma.user.update({
-      where: { id: Number(id) },
-      data: { username, password },
-    });
+app.delete("/user/:id", asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const user = await prisma.user.delete({ where: { id: Number(id) } });
+  res.json(user);
+}));
 
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to update user" });
-  }
-});
+app.get("/users", asyncHandler(async (req, res) => {
+  const users = await prisma.user.findMany();
+  res.json(users);
+}));
 
-// Delete User
-app.delete("/user/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
+// ------------------- PROFILE -------------------
+app.post("/profile", asyncHandler(async (req, res) => {
+  const { email, name, address, phone, userId } = req.body;
+  const profile = await prisma.profile.create({
+    data: { email, name, address, phone, userId },
+  });
+  res.status(201).json(profile);
+}));
 
-    const data = await prisma.user.delete({
-      where: { id: Number(id) },
-    });
+app.get("/profile/:id", asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const profile = await prisma.profile.findUnique({
+    where: { id: Number(id) },
+  });
+  res.json(profile);
+}));
 
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to delete user" });
-  }
-});
+// ------------------- CATEGORY -------------------
+app.post("/category", asyncHandler(async (req, res) => {
+  const { name } = req.body;
+  const category = await prisma.category.create({ data: { name } });
+  res.status(201).json(category);
+}));
 
-// Create Category
-app.post("/category", async (req, res) => {
-  try {
-    const { name } = req.body;
+// ------------------- POST -------------------
+app.post("/post", asyncHandler(async (req, res) => {
+  const { title, content, published, authorId, categoryId, assignedBy } = req.body;
 
-    const data = await prisma.category.create({
-      data: { name },
+  const post = await prisma.$transaction(async (tx) => {
+    const newPost = await tx.post.create({
+      data: { title, content, published, authorId },
     });
 
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to create category" });
-  }
-});
-
-// Create Post and Assign Category
-app.post("/post", async (req, res) => {
-  try {
-    const { title, content, published, authorId, categoryId, assignedBy } = req.body;
-
-    const data = await prisma.$transaction(async (prisma) => {
-      const post = await prisma.post.create({
-        data: { title, content, published, authorId },
-      });
-
-      await prisma.categoriesOnPosts.create({
-        data: {
-          postId: post.id,
-          categoryId,
-          assignedBy,
-        },
-      });
-
-      return post;
-    });
-
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to create post and assign category" });
-  }
-});
-
-// Get All Users
-app.get("/users", async (req, res) => {
-  try {
-    const data = await prisma.user.findMany();
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch users" });
-  }
-});
-
-// Get Single Profile
-app.get("/profile/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const data = await prisma.profile.findUnique({
-      where: { id: Number(id) },
-    });
-
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch profile" });
-  }
-});
-
-// Get Post By ID
-app.get("/post/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const data = await prisma.post.findUnique({
-      where: { id: Number(id) },
-      include: {
-        CategoriesOnPosts: {
-          include: {
-            category: true,
-          },
-        },
+    await tx.categoriesOnPosts.create({
+      data: {
+        postId: newPost.id,
+        categoryId,
+        assignedBy,
       },
     });
 
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch post" });
-  }
-});
+    return newPost;
+  });
 
-// Start server
+  res.status(201).json(post);
+}));
+
+app.get("/post/:id", asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const post = await prisma.post.findUnique({
+    where: { id: Number(id) },
+    include: {
+      CategoriesOnPosts: {
+        include: { category: true },
+      },
+    },
+  });
+
+  res.json(post);
+}));
+
+// ------------------- SERVER -------------------
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
